@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Queue;
@@ -178,7 +179,45 @@ public final class SimpleLexer {
     /* Converts an NFA to a DFA using the subset construction algorithm. */
     static Dfa convertNfaToDfa(final Nfa nfa) {
       // TODO: Implement the subset construction algorithm to convert the NFA to a DFA.
-      return null; // TODO: Replace it with the actual DFA instance.
+      /* D0 := ε-closure({N0}) */
+      final Set<Nfa.State> D0 = closure(Set.of(nfa.start));
+      /* D := {D0} */
+      final Map<Set<Nfa.State>, State> D = new HashMap<Set<Nfa.State>, State>();
+      D.put(D0, new State(acceptingType(D0)));
+      /* W := {D0} */
+      final Queue<Set<Nfa.State>> W = new ArrayDeque<Set<Nfa.State>>();
+      W.add(D0);
+      /* while W != ∅: */
+      while (!W.isEmpty()) {
+        /* remove Q from W */
+        final Set<Nfa.State> Q = W.remove();
+        /* for a in Σ: */
+        for (final Character a : nfa.alphabet) {
+          /*
+           * T := ∅
+           * for S in Q:
+           *   T := T ∪ δ_N(S, a)
+           * T' := ε-closure(T)
+           */
+          final Set<Nfa.State> T = closure(move(Q, a));
+          if (T.isEmpty()) {
+            continue;
+          }
+          /*
+           * D' := D ∪ {T'}
+           * δ_D(Q, a) = T'
+           * if T' ∉ D:
+           *   W := W ∪ {T'}
+           * D := D'
+           */
+          if (!D.containsKey(T)) {
+            D.put(T, new State(acceptingType(T)));
+            W.add(T);
+          }
+          D.get(Q).transitions.put(a, D.get(T)); // update δ_D
+        }
+      }
+      return new Dfa(D.get(D0)); // TODO: Replace it with the actual DFA instance.
     }
 
     private static Set<Nfa.State> move(final Set<Nfa.State> states, final Character character) {
