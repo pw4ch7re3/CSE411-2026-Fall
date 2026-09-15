@@ -191,12 +191,12 @@ public final class SimpleLexer {
       while (!W.isEmpty()) {
         /* remove Q from W */
         final Set<Nfa.State> Q = W.remove();
-        /* for a in Σ: */
+        /* for α in Σ: */
         for (final Character a : nfa.alphabet) {
           /*
            * T := ∅
            * for S in Q:
-           *   T := T ∪ δ_N(S, a)
+           *   T := T ∪ δ_N(S, α)
            * T' := ε-closure(T)
            */
           final Set<Nfa.State> T = closure(move(Q, a));
@@ -205,7 +205,7 @@ public final class SimpleLexer {
           }
           /*
            * D' := D ∪ {T'}
-           * δ_D(Q, a) = T'
+           * δ_D(Q, α) = T'
            * if T' ∉ D:
            *   W := W ∪ {T'}
            * D := D'
