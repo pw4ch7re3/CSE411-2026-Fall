@@ -36,8 +36,53 @@ public final class Ll1ParsingTable {
 
   /** Constructs the complete table, including conflicting cells when they exist. */
   public static Ll1ParsingTable build(final Grammar grammar) {
-    // TODO: Complete this method
-    return null; // TODO: replace the return value.
+    final Map<String, Set<String>> firstSets = initialSets(grammar);
+    final Map<String, Set<String>> followSets = initialSets(grammar);
+    final Map<String, Map<String, List<Production>>> cells =
+      new LinkedHashMap<String, Map<String, List<Production>>>();
+    boolean mutated;
+    // Computing FIRST
+    do {
+      mutated = false;
+      for (final Production production : grammar.getProductions()) {
+        mutated |= firstSets.get(production.getLeftHandSide())
+          .addAll(firstOfSequence(production.getRightHandSide(), grammar, firstSets));
+      }
+    } while (mutated);
+    // Computing FOLLOW
+    followSets.get(grammar.getStartSymbol()).add(Grammar.END_MARKER);
+    do {
+      mutated = false;
+      for (final Production production : grammar.getProductions()) {
+        final List<String> rhs = production.getRightHandSide();
+        for (int i = 0; i < rhs.size(); i++) {
+          final String symbol = rhs.get(i);
+          if (grammar.getNonterminals().contains(symbol)) {
+            final List<String> suffix = rhs.subList(i + 1, rhs.size());
+            final Set<String> firstOfSuffix = firstOfSequence(suffix, grammar, firstSets);
+            mutated |= addWithoutEpsilon(followSets.get(symbol), firstOfSuffix);
+            if (firstOfSuffix.contains(Grammar.EPSILON)) {
+              mutated |= followSets.get(symbol)
+                .addAll(followSets.get(production.getLeftHandSide()));
+            }
+          }
+        }
+      }
+    } while (mutated);
+    // Cell Construction
+    for (final String nonterminal : grammar.getNonterminals()) {
+      cells.put(nonterminal, new LinkedHashMap<String, List<Production>>());
+    }
+    for (final Production production : grammar.getProductions()) {
+      final Set<String> lookaheads = firstOfSequence(production.getRightHandSide(), grammar, firstSets);
+      if (lookaheads.remove(Grammar.EPSILON)) {
+        lookaheads.addAll(followSets.get(production.getLeftHandSide()));
+      }
+      for (final String lookahead : lookaheads) {
+        add(cells, production.getLeftHandSide(), lookahead, production);
+      }
+    }
+    return new Ll1ParsingTable(grammar, firstSets, followSets, cells);
   }
 
   public Grammar getGrammar() {

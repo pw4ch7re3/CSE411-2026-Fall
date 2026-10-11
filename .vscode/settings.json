@@ -4,6 +4,7 @@
     },
     "java.diagnostic.filter": [
         "**/simple-lexer/**/*.java",
-        "**/simple-lexer-subset/**/*.java"
+        "**/simple-lexer-subset/**/*.java",
+        "**/top-down-parser/**/*.java"
     ]
 }
