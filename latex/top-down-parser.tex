@@ -1,0 +1,163 @@
+\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{amsmath}
+
+\title{CSE411 Assignment \#3: LL(1) Top-Down Parser}
+\author{Sungho Kim (20241065)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{The Parsing Table for \textit{valid-grammar.json}}
+
+\begin{table}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ l | l | l | l | l | l | l }
+Nonterminal & INT & + & * & ( & ) & \$ \\
+\hline
+E & E → T E$'$ & & & E → T E$'$ & & \\
+E$'$ & & E$'$ → + T E$'$ & & & E$'$ → $\varepsilon$ & E$'$ → $\varepsilon$ \\
+T & T → F T$'$ & & & T → F T$'$ & & \\
+T$'$ & & T$'$ → $\varepsilon$ & T$'$ → * F T$'$ & & T$'$ → $\varepsilon$ & T$'$ → $\varepsilon$ \\
+F & F → INT & & & F → ( E ) & & 
+\end{tabular}}
+\end{table}
+
+\section{The Parsing Table for \textit{invalid-grammar.json}}
+
+\begin{table}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ l | l | l | l | l | l | l }
+Nonterminal & INT & + & * & ( & ) & \$ \\
+\hline
+E & E → T X & & & E → T X & & \\
+E$'$ & & E$'$ → + T E$'$ & & & E$'$ → $\varepsilon$ & E$'$ → $\varepsilon$ \\
+T & T → INT T$'$ & & & T → ( E ) T$'$ & & \\
+T$'$ & & T$'$ → $\varepsilon$ & T$'$ → * T T$'$, T$'$ → $\varepsilon$ & & T$'$ → $\varepsilon$ & T$'$ → $\varepsilon$ \\
+X & & X → E$'$, X → + INT E$'$ & & & X → E$'$ & X → E$'$
+\end{tabular}}
+\end{table}
+
+\section{The explanation for why \textit{invalid-grammar.json} is invalid}
+The parsing table for \textit{invalid-grammar.json} contains the following conflicts:
+
+\begin{itemize}
+  \item The cell in row $\text{T}'$ and column $*$ contains both
+  $\text{T}' \to *\,\text{T}\,\text{T}'$ and
+  $\text{T}' \to \varepsilon$.
+  This is a FIRST/FOLLOW conflict: $*$ belongs to both
+  $\mathrm{FIRST}(*\,\text{T}\,\text{T}')$ and
+  $\mathrm{FOLLOW}(\text{T}')$.
+
+  \item The cell in row $\text{X}$ and column $+$ contains both
+  $\text{X} \to \text{E}'$ and
+  $\text{X} \to +\,\mathrm{INT}\,\text{E}'$.
+  This is a FIRST/FIRST conflict: $+$ belongs to both
+  $\mathrm{FIRST}(\text{E}')$ and
+  $\mathrm{FIRST}(+\,\mathrm{INT}\,\text{E}')$.
+\end{itemize}
+
+These conflicts mean that an LL(1) parser cannot uniquely select a
+production using only the current nonterminal and one lookahead token.
+Therefore, the grammar is not LL(1) and is unsuitable for this LL(1)
+parser. Here, ``invalid'' refers to its suitability for LL(1) parsing,
+rather than its validity as a context-free grammar.
+
+Although parsing table conflicts do not necessarily imply ambiguity,
+this grammar is also ambiguous: some strings have more than one
+distinct parse tree, as demonstrated below.
+
+\subsection{INT + INT}
+
+The string $\mathrm{INT} + \mathrm{INT}$ can be derived using either
+production of $\text{X}$.
+
+Using $\text{X} \to \text{E}'$:
+\[
+\begin{aligned}
+\text{E}
+  &\Rightarrow \text{T}\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} + \text{T}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} + \mathrm{INT}\,\text{T}'\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} + \mathrm{INT}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} + \mathrm{INT}.
+\end{aligned}
+\]
+
+Using $\text{X} \to +\,\mathrm{INT}\,\text{E}'$:
+\[
+\begin{aligned}
+\text{E}
+  &\Rightarrow \text{T}\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{X} \\
+  &\Rightarrow \mathrm{INT} + \mathrm{INT}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} + \mathrm{INT}.
+\end{aligned}
+\]
+
+These are two distinct leftmost derivations of the same string, so
+they correspond to different parse trees. Therefore, the grammar
+is ambiguous.
+
+\subsection{INT * INT * INT}
+
+The string $\mathrm{INT} * \mathrm{INT} * \mathrm{INT}$ can also be
+derived in two different ways. In the production
+$\text{T}' \to *\,\text{T}\,\text{T}'$, the nested $\text{T}$ can itself
+generate further multiplication through
+$\text{T} \to \mathrm{INT}\,\text{T}'$.
+Consequently, the final multiplication can be generated either by
+the $\text{T}'$ inside this nested $\text{T}$ or by the $\text{T}'$
+following it.
+
+Using the $\text{T}'$ inside the nested $\text{T}$ to generate the
+final multiplication:
+\[
+\begin{aligned}
+\text{E}
+  &\Rightarrow \text{T}\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \text{T}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \text{T}\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}.
+\end{aligned}
+\]
+
+Using the $\text{T}'$ following the nested $\text{T}$ to generate the
+final multiplication:
+\[
+\begin{aligned}
+\text{E}
+  &\Rightarrow \text{T}\,\text{X} \\
+  &\Rightarrow \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \text{T}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \text{T}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{T}'\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{X} \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}\,\text{E}' \\
+  &\Rightarrow \mathrm{INT} * \mathrm{INT} * \mathrm{INT}.
+\end{aligned}
+\]
+
+These are also two distinct leftmost derivations of the same string.
+They place the final multiplication in different parts of the parse
+tree, providing another example of the grammar's ambiguity.
+\end{document}
