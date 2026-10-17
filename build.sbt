@@ -73,7 +73,8 @@ lazy val bottomUpParser =
   (project in file("bottom-up-parser"))
     .settings(commonSettings: _*)
     .settings(
-      libraryDependencies += "junit" % "junit" % "4.13.2" % Test
+      libraryDependencies += "junit" % "junit" % "4.13.2" % Test,
+      exportJars := false
     )
     .dependsOn(topDownParser, simpleLexerSubset)
 
