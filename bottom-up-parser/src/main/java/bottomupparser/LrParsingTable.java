@@ -229,14 +229,18 @@ public final class LrParsingTable {
   }
 
   private static Automaton buildLR0Automaton(final Grammar grammar, final Production augmented) {
-    final Set<Item> initial = closureLR0(Collections.singleton(new Item(augmented, 0, null)), grammar);
-    return buildAutomaton(initial, grammar, (state, symbol) -> gotoLR0(state, symbol, grammar));
+    final Set<Item> seed = Collections.singleton(new Item(augmented, 0, null));
+    final Set<Item> initial = closureLR0(seed, grammar);
+    final GotoFunction gotoFunction = (state, symbol) -> gotoLR0(state, symbol, grammar);
+    return buildAutomaton(initial, grammar, gotoFunction);
   }
 
   private static Automaton buildCanonicalLR1Automaton(final Grammar grammar,
       final GrammarAnalysis analysis, final Production augmented) {
-    final Set<Item> initial = closureLr1(Collections.singleton(new Item(augmented, 0, Grammar.END_MARKER)), grammar, analysis);
-    return buildAutomaton(initial, grammar, (state, symbol) -> gotoLr1(state, symbol, grammar, analysis));
+    final Set<Item> seed = Collections.singleton(new Item(augmented, 0, Grammar.END_MARKER));
+    final Set<Item> initial = closureLr1(seed, grammar, analysis);
+    final GotoFunction gotoFunction = (state, symbol) -> gotoLr1(state, symbol, grammar, analysis);
+    return buildAutomaton(initial, grammar, gotoFunction);
   }
 
   private static Automaton buildAutomaton(final Set<Item> initial, final Grammar grammar,
@@ -348,29 +352,39 @@ public final class LrParsingTable {
 
   private static Automaton mergeLALRStates(final Automaton canonical) {
     final List<Set<Item>> states = new ArrayList<Set<Item>>();
-    final int[] stateNumbers = new int[canonical.states.size()];
     final List<Map<String, Integer>> transitions = new ArrayList<Map<String, Integer>>();
     final Map<Set<Core>, Integer> coreNumbers = new LinkedHashMap<Set<Core>, Integer>();
+    final int[] mergedStates = new int[canonical.states.size()]; // Helper as a index set
+    /* Merge states */
     for (int state = 0; state < canonical.states.size(); state++) {
+      /* Ignore its lookahead */
       final Set<Core> core = coreOf(canonical.states.get(state));
       final Integer existing = coreNumbers.get(core);
-      if (existing == null) {
-        stateNumbers[state] = states.size();
+      if (existing == null) { // Initialization
+        mergedStates[state] = states.size();
         coreNumbers.put(core, states.size());
         states.add(new LinkedHashSet<Item>(canonical.states.get(state)));
         transitions.add(new LinkedHashMap<String, Integer>());
-      } else {
-        stateNumbers[state] = existing;
+      } else { // Update
+        mergedStates[state] = existing;
         states.get(existing).addAll(canonical.states.get(state));
       }
     }
+    /* Merge transitions */
     for (int state = 0; state < canonical.states.size(); state++) {
-      final Map<String, Integer> row = transitions.get(stateNumbers[state]);
+      final Map<String, Integer> row = transitions.get(mergedStates[state]);
+      /**
+       * Claim: One CLR(1) state's transitions suffice for every state with the same core.
+       * Proof: Let I and J have the same core. For any symbol X, an item can advance over X
+       * in I exactly when an item with the same production and dot can do so in J. Thus
+       * goto(I, X) and goto(J, X) are either both empty or have advanced items with the
+       * same cores. QED.
+       */
       if (!row.isEmpty()) {
         continue;
       }
       for (final Map.Entry<String, Integer> edge : canonical.transitions.get(state).entrySet()) {
-        row.put(edge.getKey(), stateNumbers[edge.getValue()]);
+        row.put(edge.getKey(), mergedStates[edge.getValue()]);
       }
     }
     return new Automaton(states, transitions);
