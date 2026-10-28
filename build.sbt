@@ -79,7 +79,6 @@ lazy val bottomUpParser =
     )
     .dependsOn(topDownParser, simpleLexerSubset)
 
-<<<<<<< HEAD
 lazy val esjcParser = {
   val `esjc-parser` =
     (project in file("esjc-parser")).settings(commonSettings*).dependsOn(sjc)
@@ -113,7 +112,7 @@ lazy val esjcLlGen = {
     .dependsOn(sjc, esjcParser, esjcAst, esjcTypeChecker)
   `esjc-ll-gen`
 }
-=======
+
 lazy val sjcParser =
   (project in file("sjc-parser"))
     .settings(commonSettings: _*)
@@ -128,4 +127,3 @@ lazy val sjcAst =
       libraryDependencies += "junit" % "junit" % "4.13.2" % Test
     )
     .dependsOn(sjcParser)
->>>>>>> d4405de9dde6e398f3da56f770f793ee847439a6

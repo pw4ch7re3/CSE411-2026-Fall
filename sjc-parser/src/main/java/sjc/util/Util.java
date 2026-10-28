@@ -90,6 +90,23 @@ public class Util {
 
     public static String getResource(final Class<?> c, final String relpath,
                                      final String filename) throws Exception {
+        // Test resources live at the classpath root, which may be separate
+        // from the directory containing the compiled test classes.
+        final java.net.URL resource = c.getResource("/" + filename);
+        if (resource != null) {
+            if ("file".equals(resource.getProtocol())) {
+                return new File(resource.toURI()).getAbsolutePath();
+            }
+            // sbt can package resources in a JAR; callers require a file path.
+            final java.nio.file.Path copy = java.nio.file.Files.createTempFile(
+                    "sjc-resource-", ".java");
+            copy.toFile().deleteOnExit();
+            try (java.io.InputStream input = resource.openStream()) {
+                java.nio.file.Files.copy(input, copy,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            return copy.toAbsolutePath().toString();
+        }
         final File f = new File(new URI(c.getResource(relpath).toURI().toASCIIString()
                 + "/" + filename));
         if (f.exists()) return f.getAbsolutePath();

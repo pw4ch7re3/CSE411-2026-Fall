@@ -6,6 +6,8 @@
         "**/simple-lexer/**/*.java",
         "**/simple-lexer-subset/**/*.java",
         "**/top-down-parser/**/*.java",
-        "**/bottom-up-parser/**/*.java"
+        "**/bottom-up-parser/**/*.java",
+        "**/sjc-parser/**/*.java",
+        "**/sjc-ast/**/*.java"
     ]
 }
