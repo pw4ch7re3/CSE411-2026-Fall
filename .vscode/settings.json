@@ -11,7 +11,9 @@
         "**/top-down-parser/**/*.java",
         "**/bottom-up-parser/**/*.java",
         "**/sjc-parser/**/*.java",
-        "**/sjc-ast/**/*.java"
+        "**/sjc-ast/**/*.java",
+        "**/sjc-symboltable/**/*.java",
+        "**/sjc-typechecker/**/*.java"
     ],
     "[json]": {
         "editor.formatOnSave": false,
