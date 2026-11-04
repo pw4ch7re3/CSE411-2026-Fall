@@ -116,31 +116,88 @@ public class SymbolTableBuilder {
 
     @Override
     public boolean visit(final FieldDeclaration node) {
-      // TODO
+      for (final Object m : node.modifiers()) {
+        ((ASTNode) m).accept(this);
+      }
+      node.getType().accept(this);
+      for (final Object o : node.fragments()) {
+        ((VariableDeclarationFragment) o).getName().accept(this);
+      }
       return false;
     }
 
     @Override
     public boolean visit(final MethodDeclaration node) {
-      // TODO
+      for (final Object m : node.modifiers()) {
+        ((ASTNode) m).accept(this);
+      }
+      node.getReturnType2().accept(this);
+      node.getName().accept(this);
+      for (final Object o : node.parameters()) {
+        final SingleVariableDeclaration svd = (SingleVariableDeclaration) o;
+        svd.getType().accept(this);
+        svd.getName().accept(this);
+      }
+      node.getBody().accept(this);
       return false;
     }
 
     @Override
     public boolean visit(final MethodInvocation node) {
-      // TODO
+      final Expression e = node.getExpression();
+      final String methodName = node.getName().getIdentifier();
+      if ((e == null)
+          || ((e instanceof SimpleName) && ((SimpleName) e).getIdentifier()
+              .equals(this.className))) {
+        final MethodDeclaration md = this.methodMap.get(methodName);
+        if (md == null) {
+          throw new Error(node, "Could not resolve method \"" + methodName
+              + "\"");
+        }
+        this.result.put(node, md);
+      }
+      for (final Object o : node.arguments()) {
+        ((ASTNode) o).accept(this);
+      }
       return false;
     }
 
     @Override
     public boolean visit(final SimpleName node) {
-      // TODO
+      final ASTNode parent = node.getParent();
+      if (parent instanceof SingleVariableDeclaration) {
+        final String name = node.getIdentifier();
+        if (!this.localNames.add(name)) {
+          throw new Error(node, "Duplicate declaration of \"" + name + "\"");
+        }
+        this.nameMap.put(name, parent);
+        return false;
+      }
+      if ((parent instanceof VariableDeclarationFragment)
+          || (parent instanceof MethodDeclaration)
+          || (parent instanceof TypeDeclaration)
+          || (parent instanceof org.eclipse.jdt.core.dom.SimpleType)) {
+        return false;
+      }
+      final String name = node.getIdentifier();
+      final ASTNode decl = this.nameMap.get(name);
+      if (decl == null) {
+        throw new Error(node, "Could not resolve symbol \"" + name + "\"");
+      }
+      this.result.put(node, decl);
       return false;
     }
 
     @Override
     public boolean visit(final VariableDeclarationStatement node) {
-      // TODO
+      for (final Object o : node.fragments()) {
+        final VariableDeclarationFragment vdf = (VariableDeclarationFragment) o;
+        final String name = vdf.getName().getIdentifier();
+        if (!this.localNames.add(name)) {
+          throw new Error(vdf, "Duplicate declaration of \"" + name + "\"");
+        }
+        this.nameMap.put(name, node);
+      }
       return false;
     }
 
@@ -177,7 +234,57 @@ public class SymbolTableBuilder {
 
     @Override
     public boolean visit(final TypeDeclaration node) {
-      // TODO
+      final String name = node.getName().getIdentifier();
+
+      if (!hasPublicModifier(node.modifiers())) {
+        if (this.classMap.containsKey(name)) {
+          throw new Error(node, "Duplicate class \"" + name + "\"");
+        }
+        this.classMap.put(name, node);
+        for (final FieldDeclaration fd : node.getFields()) {
+          for (final Object o : fd.fragments()) {
+            final String fieldName = ((VariableDeclarationFragment) o)
+                .getName().getIdentifier();
+            final Pair<String, String> key = new Pair<>(name, fieldName);
+            if (this.fieldMap.containsKey(key)) {
+              throw new Error(fd, "Duplicate field \"" + fieldName
+                  + "\" in class \"" + name + "\"");
+            }
+            this.fieldMap.put(key, fd);
+          }
+        }
+        return false;
+      }
+
+      this.className = name;
+      for (final FieldDeclaration fd : node.getFields()) {
+        for (final Object o : fd.fragments()) {
+          final String fieldName = ((VariableDeclarationFragment) o).getName()
+              .getIdentifier();
+          if (this.nameMap.containsKey(fieldName)) {
+            throw new Error(fd, "Duplicate field \"" + fieldName + "\"");
+          }
+          this.nameMap.put(fieldName, fd);
+        }
+      }
+      for (final MethodDeclaration md : node.getMethods()) {
+        final String methodName = md.getName().getIdentifier();
+        if (this.methodMap.containsKey(methodName)) {
+          throw new Error(md, "Duplicate method \"" + methodName + "\"");
+        }
+        this.methodMap.put(methodName, md);
+      }
+
+      for (final FieldDeclaration fd : node.getFields()) {
+        fd.accept(this);
+      }
+      for (final MethodDeclaration md : node.getMethods()) {
+        final Map<String, ASTNode> saved = new HashMap<>(this.nameMap);
+        this.localNames.clear();
+        md.accept(this);
+        this.nameMap = saved;
+        this.localNames.clear();
+      }
       return false;
     }
   }

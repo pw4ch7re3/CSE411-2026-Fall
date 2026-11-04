@@ -72,7 +72,7 @@ lazy val topDownParser =
 
 lazy val bottomUpParser =
   (project in file("bottom-up-parser"))
-    .settings(commonSettings: _*)
+    .settings(commonSettings*)
     .settings(
       libraryDependencies += "junit" % "junit" % "4.13.2" % Test,
       exportJars := false
@@ -115,14 +115,14 @@ lazy val esjcLlGen = {
 
 lazy val sjcParser =
   (project in file("sjc-parser"))
-    .settings(commonSettings: _*)
+    .settings(commonSettings*)
     .settings(
       libraryDependencies += "junit" % "junit" % "4.13.2" % Test
     )
 
 lazy val sjcAst =
   (project in file("sjc-ast"))
-    .settings(commonSettings: _*)
+    .settings(commonSettings*)
     .settings(
       libraryDependencies += "junit" % "junit" % "4.13.2" % Test
     )
@@ -130,15 +130,16 @@ lazy val sjcAst =
 
 lazy val sjcSymbolTable =
   (project in file("sjc-symboltable"))
-    .settings(commonSettings: _*)
+    .settings(commonSettings*)
     .settings(
-      libraryDependencies += "junit" % "junit" % "4.13.2" % Test
+      libraryDependencies += "junit" % "junit" % "4.13.2" % Test,
+      exportJars := false
     )
     .dependsOn(sjcParser, sjcAst)
 
 lazy val sjcTypeChecker =
   (project in file("sjc-typechecker"))
-    .settings(commonSettings: _*)
+    .settings(commonSettings*)
     .settings(
       libraryDependencies += "junit" % "junit" % "4.13.2" % Test
     )
