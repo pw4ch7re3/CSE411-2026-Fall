@@ -2,6 +2,9 @@
     "files.watcherExclude": {
         "**/target/**": true
     },
+    "[antlr]": {
+        "editor.formatOnSave": false
+    },
     "java.diagnostic.filter": [
         "**/simple-lexer/**/*.java",
         "**/simple-lexer-subset/**/*.java",
@@ -9,5 +12,10 @@
         "**/bottom-up-parser/**/*.java",
         "**/sjc-parser/**/*.java",
         "**/sjc-ast/**/*.java"
-    ]
+    ],
+    "[json]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnType": false,
+        "editor.formatOnPaste": false
+    }
 }
